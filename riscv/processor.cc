@@ -22,9 +22,15 @@
 #define STATE state
 
 processor_t::processor_t(const char* isa, const char* priv, const char* varch,
-                         simif_t* sim, uint32_t id, bool halt_on_reset,
+                         simif_t* sim, uint32_t id, 
+                         std::unordered_map<std::string, adele_params_t> adele_params,
+                         std::vector<std::string> adele_activate,
+                         std::vector<std::string> adele_deactivate,
+                         bool halt_on_reset,
                          FILE* log_file)
-  : debug(false), halt_request(HR_NONE), sim(sim), ext(NULL), id(id), xlen(0),
+  : ax_control(this, adele_activate, adele_deactivate), debug(false), halt_request(HR_NONE), sim(sim), ext(NULL), 
+  state(&ax_control),
+  id(id), xlen(0),
   histogram_enabled(false), log_commits_enabled(false),
   log_file(log_file), halt_on_reset(halt_on_reset),
   extension_table(256, false), impl_table(256, false), last_pc(1), executions(1)
@@ -52,6 +58,7 @@ processor_t::processor_t(const char* isa, const char* priv, const char* varch,
     set_mmu_capability(IMPL_MMU_SV48);
 
   reset();
+  this->adele_params = adele_params;
 }
 
 processor_t::~processor_t()
@@ -1881,4 +1888,8 @@ void processor_t::trigger_updated()
       mmu->check_triggers_store = true;
     }
   }
+}
+
+std::unordered_map<std::string, adele_params_t> processor_t::get_adele_params() {
+  return this->adele_params;
 }

@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@prefix@
+libdir=${prefix}/@libdir@
+includedir=${prefix}/@includedir@
+
+Name: riscv-adele
+Description: RISC-V AxPIKE Approximate Computing library
+Version: git
+Libs: -Wl,-rpath,${libdir} -L${libdir} -ladele
+Cflags: -I${includedir}
+URL: http://varchc.github.io/AxPIKE

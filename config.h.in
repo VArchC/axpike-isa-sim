@@ -1,7 +1,13 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if subproject MCPPBS_SPROJ_NORM is enabled */
+#undef ACADP_ENABLED
+
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
+
+/* Define if subproject MCPPBS_SPROJ_NORM is enabled */
+#undef ADELE_ENABLED
 
 /* Define if subproject MCPPBS_SPROJ_NORM is enabled */
 #undef CUSTOMEXT_ENABLED
@@ -98,9 +104,6 @@
 
 /* Define if subproject MCPPBS_SPROJ_NORM is enabled */
 #undef SOFTFLOAT_ENABLED
-
-/* Define if subproject MCPPBS_SPROJ_NORM is enabled */
-#undef SPIKE_DASM_ENABLED
 
 /* Define if subproject MCPPBS_SPROJ_NORM is enabled */
 #undef SPIKE_MAIN_ENABLED

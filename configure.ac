@@ -96,7 +96,7 @@ AX_APPEND_LINK_FLAGS([-Wl,--export-dynamic])
 # The '*' suffix indicates an optional subproject. The '**' suffix
 # indicates an optional subproject which is also the name of a group.
 
-MCPPBS_SUBPROJECTS([ fesvr, riscv, disasm, customext, fdt, softfloat, spike_main, spike_dasm ])
+MCPPBS_SUBPROJECTS([ acadp, adele, fesvr, riscv, disasm, customext, fdt, softfloat, spike_main ])
 
 #-------------------------------------------------------------------------
 # MCPPBS subproject groups
@@ -115,6 +115,8 @@ MCPPBS_SUBPROJECTS([ fesvr, riscv, disasm, customext, fdt, softfloat, spike_main
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([riscv-adele.pc])
+AC_CONFIG_FILES([riscv-acadp.pc])
 AC_CONFIG_FILES([riscv-fesvr.pc])
 AC_CONFIG_FILES([riscv-disasm.pc])
 AC_OUTPUT

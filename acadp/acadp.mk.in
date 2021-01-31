@@ -1,0 +1,39 @@
+acadp_subproject_deps = \
+
+acadp_install_prog_c_srcs = \
+#	acadp.c
+
+acadp_hdrs = \
+	acadp.h
+
+acadp_precompiled_hdrs = \
+
+acadp_srcs = \
+
+acadp_c_srcs = \
+	acadp_approx.c \
+	acadp_defaults.c \
+	acadp_group.c \
+	acadp_model.c \
+	acadp_op.c \
+	acadp_instructions.c \
+	$(acadp_gen_c_srcs)
+
+acadp_test_srcs = \
+
+acadp_gen_hdrs = \
+	adele_grammar.h \
+
+acadp_gen_c_srcs = \
+	adele_lex.c \
+	adele_grammar.c
+
+acadp_junk = \
+	$(acadp_gen_c_srcs) \
+	$(acadp_gen_hdrs)
+
+adele_lex.c: $(src_dir)/acadp/adele_lex.l
+	flex -P adf -o adele_lex.c $(src_dir)/acadp/adele_lex.l
+
+adele_grammar.c adele_grammar.h: $(src_dir)/acadp/adele_grammar.y
+	bison -d --output=adele_grammar.c -p adf $(src_dir)/acadp/adele_grammar.y

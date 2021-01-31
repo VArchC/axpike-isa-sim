@@ -30,7 +30,11 @@ public:
         std::vector<std::pair<reg_t, abstract_device_t*>> plugin_devices,
         const std::vector<std::string>& args, const std::vector<int> hartids,
         const debug_module_config_t &dm_config, const char *log_path,
-        bool dtb_enabled, const char *dtb_file);
+        bool dtb_enabled, const char *dtb_file,
+        std::unordered_map<std::string, adele_params_t> adele_params,
+        std::unordered_map<int, std::vector<std::string>> adele_activate,
+        std::unordered_map<int, std::vector<std::string>> adele_deactivate
+        );
   ~sim_t();
 
   // run the simulation to completion
@@ -56,6 +60,12 @@ public:
 
   // Callback for processors to let the simulation know they were reset.
   void proc_reset(unsigned id);
+
+  void printStats() {
+    for (auto& p: procs) {
+      p->ax_control.stats.printCounters();
+    }
+  }
 
 private:
   std::vector<std::pair<reg_t, mem_t*>> mems;

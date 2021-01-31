@@ -20,8 +20,11 @@
 volatile bool ctrlc_pressed = false;
 static void handle_signal(int sig)
 {
-  if (ctrlc_pressed)
+  if (ctrlc_pressed) {
+    extern sim_t *simulation;
+    simulation->printStats();
     exit(-1);
+  }
   ctrlc_pressed = true;
   signal(sig, &handle_signal);
 }
@@ -35,7 +38,11 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file)
+             bool dtb_enabled, const char *dtb_file,
+             std::unordered_map<std::string, adele_params_t> adele_params,
+             std::unordered_map<int, std::vector<std::string>> adele_activate,
+             std::unordered_map<int, std::vector<std::string>> adele_deactivate
+             )
   : htif_t(args),
     mems(mems),
     plugin_devices(plugin_devices),
@@ -77,7 +84,11 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
   for (size_t i = 0; i < nprocs; i++) {
     int hart_id = hartids.empty() ? i : hartids[i];
-    procs[i] = new processor_t(isa, priv, varch, this, hart_id, halted,
+    procs[i] = new processor_t(isa, priv, varch, this, hart_id, 
+                               adele_params,
+                               adele_activate[i],
+                               adele_deactivate[i],
+                               halted,
                                log_file.get());
   }
 
@@ -148,6 +159,8 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
                 << nprocs << ").\n";
       exit(1);
   }
+
+  ax_htif.initialize(this);
 }
 
 sim_t::~sim_t()

@@ -17,6 +17,7 @@
 #include "softfloat_types.h"
 #include "specialize.h"
 #include <cinttypes>
+#include "axpike_storage.h"
 
 typedef int64_t sreg_t;
 typedef uint64_t reg_t;
@@ -138,6 +139,8 @@ private:
   uint64_t imm_sign() { return xs(63, 1); }
 };
 
+#include "axpike_control.h"
+
 template <class T, size_t N, bool zero_reg>
 class regfile_t
 {
@@ -147,20 +150,25 @@ public:
     if (!zero_reg || i != 0)
       data[i] = value;
   }
-  const T& operator [] (size_t i) const
+  AxPIKE::Word<T>& operator [] (size_t i)
   {
     return data[i];
   }
-  regfile_t()
+  regfile_t(AxPIKE::Control* c, std::string name)
   {
+    for (uint32_t i = 0; i < N; i++) {
+      data[i].set(c, AxPIKE::Source::REGBANK, name, i);
+    }
     reset();
   }
   void reset()
   {
-    memset(data, 0, sizeof(data));
+    for (uint32_t i = 0; i < N; i++) {
+      memset(&(data[i].value), 0, sizeof data[i].value);
+    }
   }
 private:
-  T data[N];
+  AxPIKE::Word<T> data[N];
 };
 
 // helpful macros, etc
@@ -170,10 +178,16 @@ private:
 #define FLEN (p->get_flen())
 #define READ_REG(reg) STATE.XPR[reg]
 #define READ_FREG(reg) STATE.FPR[reg]
-#define RD READ_REG(insn.rd())
 #define RS1 READ_REG(insn.rs1())
 #define RS2 READ_REG(insn.rs2())
 #define RS3 READ_REG(insn.rs3())
+#define FETCH_REG(reg) READ_REG(reg)
+#define FETCH_FREG(reg) READ_FREG(reg)
+#define FETCH_RS1 FETCH_REG(insn.rs1())
+#define FETCH_RS2 FETCH_REG(insn.rs2())
+#define FETCH_RS3 FETCH_REG(insn.rs3())
+#define FETCH_RD FETCH_REG(insn.rd())
+#define RD FETCH_REG(insn.rd())
 #define WRITE_RD(value) WRITE_REG(insn.rd(), value)
 
 #ifndef RISCV_ENABLE_COMMITLOG

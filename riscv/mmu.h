@@ -94,32 +94,59 @@ public:
 #define RISCV_XLATE_VIRT_MXR (1U << 1)
 
   // template for functions that load an aligned value from memory
-  #define load_func(type, prefix, xlate_flags) \
-    inline type##_t prefix##_##type(reg_t addr, bool require_alignment = false) { \
+  #define load_func(datatype, prefix, xlate_flags) \
+    inline datatype##_t prefix##_##datatype(reg_t addr, bool require_alignment = false) { \
+      AxPIKE::Control*c = NULL;\
+      if (likely(proc != NULL)) c = &proc->ax_control; \
       if (xlate_flags) \
         flush_tlb(); \
-      if (unlikely(addr & (sizeof(type##_t)-1))) { \
+      if (unlikely(addr & (sizeof(datatype##_t)-1))) { \
         if (require_alignment) load_reserved_address_misaligned(addr); \
-        else return misaligned_load(addr, sizeof(type##_t)); \
+        else return misaligned_load(addr, sizeof(datatype##_t)); \
       } \
       reg_t vpn = addr >> PGSHIFT; \
-      size_t size = sizeof(type##_t); \
+      size_t size = sizeof(datatype##_t); \
       if (likely(tlb_load_tag[vpn % TLB_ENTRIES] == vpn)) { \
         if (proc) READ_MEM(addr, size); \
-        return from_target(*(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr)); \
+        datatype##_t *bypass = (datatype##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+        datatype##_t data = from_target(*(target_endian<datatype##_t>*)bypass); \
+        if (likely(c != NULL) && c->DM_memrd[c->cur_insn_id] != NULL) {\
+          c->s.type = AxPIKE::Source::MEM;\
+          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
+          c->s.name = "Mem";\
+          c->s.address = addr;\
+          c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
+          c->s.op = AxPIKE::Source::READ;\
+          c->s.width = sizeof(datatype##_t);\
+          c->s.bypass = bypass;\
+          (c->DM_memrd[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &data);\
+        }\
+        return data; \
       } \
       if (unlikely(tlb_load_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
-        type##_t data = from_target(*(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr)); \
+        datatype##_t *bypass = (datatype##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
+        datatype##_t data = from_target(*(target_endian<datatype##_t>*)bypass); \
         if (!matched_trigger) { \
           matched_trigger = trigger_exception(OPERATION_LOAD, addr, data); \
           if (matched_trigger) \
             throw *matched_trigger; \
         } \
         if (proc) READ_MEM(addr, size); \
+        if (likely(c != NULL) && c->DM_memrd[c->cur_insn_id] != NULL) {\
+          c->s.type = AxPIKE::Source::MEM;\
+          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
+          c->s.name = "Mem";\
+          c->s.address = addr;\
+          c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
+          c->s.op = AxPIKE::Source::READ;\
+          c->s.width = sizeof(datatype##_t);\
+          c->s.bypass = bypass;\
+          (c->DM_memrd[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &data);\
+        }\
         return data; \
       } \
-      target_endian<type##_t> res; \
-      load_slow_path(addr, sizeof(type##_t), (uint8_t*)&res, (xlate_flags)); \
+      target_endian<datatype##_t> res; \
+      load_slow_path(addr, sizeof(datatype##_t), (uint8_t*)&res, (xlate_flags)); \
       if (proc) READ_MEM(addr, size); \
       if (xlate_flags) \
         flush_tlb(); \
@@ -160,17 +187,30 @@ public:
 #endif
 
   // template for functions that store an aligned value to memory
-  #define store_func(type, prefix, xlate_flags) \
-    void prefix##_##type(reg_t addr, type##_t val) { \
+  #define store_func(datatype, prefix, xlate_flags) \
+    void prefix##_##datatype(reg_t addr, datatype##_t val) { \
+      AxPIKE::Control* c = NULL;\
+      if (likely(proc != NULL)) c = &(proc->ax_control);\
       if (xlate_flags) \
         flush_tlb(); \
-      if (unlikely(addr & (sizeof(type##_t)-1))) \
-        return misaligned_store(addr, val, sizeof(type##_t)); \
+      if (unlikely(addr & (sizeof(datatype##_t)-1))) \
+        return misaligned_store(addr, val, sizeof(datatype##_t)); \
       reg_t vpn = addr >> PGSHIFT; \
-      size_t size = sizeof(type##_t); \
+      size_t size = sizeof(datatype##_t); \
       if (likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) { \
         if (proc) WRITE_MEM(addr, val, size); \
-        *(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
+        if (likely(c != NULL) && c->DM_memwr[c->cur_insn_id] != NULL) {\
+          c->s.type = AxPIKE::Source::MEM;\
+          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
+          c->s.name = "Mem";\
+          c->s.address = addr;\
+          c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
+          c->s.op = AxPIKE::Source::WRITE;\
+          c->s.width = sizeof(datatype##_t);\
+          c->s.bypass = tlb_data[vpn % TLB_ENTRIES].host_offset + addr;\
+          (c->DM_memwr[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &val);\
+        }\
+        *(target_endian<datatype##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
       } \
       else if (unlikely(tlb_store_tag[vpn % TLB_ENTRIES] == (vpn | TLB_CHECK_TRIGGERS))) { \
         if (!matched_trigger) { \
@@ -179,11 +219,22 @@ public:
             throw *matched_trigger; \
         } \
         if (proc) WRITE_MEM(addr, val, size); \
-        *(target_endian<type##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
+        if (likely(c != NULL) && c->DM_memwr[c->cur_insn_id] != NULL) {\
+          c->s.type = AxPIKE::Source::MEM;\
+          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
+          c->s.name = "Mem";\
+          c->s.address = addr;\
+          c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
+          c->s.op = AxPIKE::Source::WRITE;\
+          c->s.width = sizeof(datatype##_t);\
+          c->s.bypass = tlb_data[vpn % TLB_ENTRIES].host_offset + addr;\
+          (c->DM_memwr[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &val);\
+        }\
+        *(target_endian<datatype##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
       } \
       else { \
-        target_endian<type##_t> target_val = to_target(val); \
-        store_slow_path(addr, sizeof(type##_t), (const uint8_t*)&target_val, (xlate_flags)); \
+        target_endian<datatype##_t> target_val = to_target(val); \
+        store_slow_path(addr, sizeof(datatype##_t), (uint8_t*)&target_val, (xlate_flags)); \
         if (proc) WRITE_MEM(addr, val, size); \
       } \
       if (xlate_flags) \
@@ -423,7 +474,7 @@ private:
   // handle uncommon cases: TLB misses, page faults, MMIO
   tlb_entry_t fetch_slow_path(reg_t addr);
   void load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate_flags);
-  void store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_t xlate_flags);
+  void store_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate_flags);
   bool mmio_load(reg_t addr, size_t len, uint8_t* bytes);
   bool mmio_store(reg_t addr, size_t len, const uint8_t* bytes);
   bool mmio_ok(reg_t addr, access_type type);

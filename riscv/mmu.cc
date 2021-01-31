@@ -152,6 +152,23 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
       tracer.trace(paddr, len, LOAD);
     else
       refill_tlb(addr, paddr, host_addr, LOAD);
+
+      AxPIKE::Control* c = NULL;
+      if (likely(proc != NULL)) {
+        c = &proc->ax_control;
+        if (c->DM_memrd[c->cur_insn_id] != NULL) {
+          c->s.type = AxPIKE::Source::MEM;
+          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;
+          c->s.name = "Mem";
+          c->s.address = addr;
+          c->s.paddress = paddr;
+          c->s.op = AxPIKE::Source::READ;
+          c->s.width = len;
+          c->s.bypass = host_addr;
+          (c->DM_memrd[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), bytes);
+        }
+      }
+
   } else if (!mmio_load(paddr, len, bytes)) {
     throw trap_load_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
   }
@@ -164,7 +181,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
   }
 }
 
-void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_t xlate_flags)
+void mmu_t::store_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate_flags)
 {
   reg_t paddr = translate(addr, len, STORE, xlate_flags);
 
@@ -181,6 +198,23 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, const uint8_t* bytes, uint32_
       tracer.trace(paddr, len, STORE);
     else
       refill_tlb(addr, paddr, host_addr, STORE);
+
+      AxPIKE::Control* c = NULL;
+      if (likely(proc != NULL)) {
+        c = &proc->ax_control;
+        if (c->DM_memwr[c->cur_insn_id] != NULL) {
+          c->s.type = AxPIKE::Source::MEM;
+          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;
+          c->s.name = "Mem";
+          c->s.address = addr;
+          c->s.paddress = paddr;
+          c->s.op = AxPIKE::Source::WRITE;
+          c->s.width = len;
+          c->s.bypass = host_addr;
+          (c->DM_memwr[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), bytes);
+        }
+      }
+
   } else if (!mmio_store(paddr, len, bytes)) {
     throw trap_store_access_fault((proc) ? proc->state.v : false, addr, 0, 0);
   }

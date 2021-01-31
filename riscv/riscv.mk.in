@@ -2,6 +2,8 @@ get_insn_list = $(shell grep ^DECLARE_INSN $(1) | sed 's/DECLARE_INSN(\(.*\),.*,
 get_opcode = $(shell grep ^DECLARE_INSN.*\\\<$(2)\\\> $(1) | sed 's/DECLARE_INSN(.*,\(.*\),.*)/\1/')
 
 riscv_subproject_deps = \
+	acadp \
+	adele \
 	fdt \
 	softfloat \
 
@@ -945,7 +947,9 @@ insn_list.h: $(src_dir)/riscv/riscv.mk.in
 	done > $@.tmp
 	mv $@.tmp $@
 
-$(riscv_gen_srcs): %.cc: insns/%.h insn_template.cc
+insn_template.h.gch: insn_count.h
+
+$(riscv_gen_srcs): %.cc: insns/%.h insns_approx/%.h insn_template.cc
 	sed 's/NAME/$(subst .cc,,$@)/' $(src_dir)/riscv/insn_template.cc | sed 's/OPCODE/$(call get_opcode,$(src_dir)/riscv/encoding.h,$(subst .cc,,$@))/' > $@
 
 riscv_junk = \

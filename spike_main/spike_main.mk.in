@@ -1,4 +1,5 @@
 spike_main_subproject_deps = \
+	adele \
 	fdt \
 	fesvr \
 	softfloat \
@@ -6,10 +7,10 @@ spike_main_subproject_deps = \
 	riscv \
 
 spike_main_install_prog_srcs = \
-	spike.cc \
-	spike-log-parser.cc \
-	xspike.cc \
-	termios-xspike.cc \
+	axpike.cc \
+#	spike-log-parser.cc \
+#	xspike.cc \
+#	termios-xspike.cc \
 
 spike_main_hdrs = \
 

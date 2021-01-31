@@ -15,6 +15,8 @@
 #include <fstream>
 #include "../VERSION"
 
+sim_t* simulation;
+
 static void help(int exit_code = 1)
 {
   fprintf(stderr, "Spike RISC-V ISA Simulator " SPIKE_VERSION "\n\n");
@@ -66,6 +68,11 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  --dm-no-abstract-csr  Debug module won't support abstract to authenticate\n");
   fprintf(stderr, "  --dm-no-halt-groups   Debug module won't support halt groups\n");
   fprintf(stderr, "  --dm-no-impebreak     Debug module won't support implicit ebreak in program buffer\n");
+  fprintf(stderr, "  --adele=<p1:v1,p2:v2,...>  AxPIKE params and values to be used on approximations\n");
+  fprintf(stderr, "  --adele-seed=<s>      Define <s> as seed for random values\n");
+  fprintf(stderr, "  --adele-activate=     AxPIKE activate/deactivate approximations\n");
+  fprintf(stderr, "  --adele-deactivate=     a1 and a2 on harts h0 and h1\n");
+  fprintf(stderr, "    <h0:a1:a2...,h1:a1:a2...,...>\n");
 
   exit(exit_code);
 }
@@ -243,6 +250,9 @@ int main(int argc, char** argv)
     .support_impebreak = true
   };
   std::vector<int> hartids;
+  std::unordered_map<std::string, adele_params_t> adele_params;
+  std::unordered_map<int,std::vector<std::string>> adele_activate;
+  std::unordered_map<int,std::vector<std::string>> adele_deactivate;
 
   auto const hartids_parser = [&](const char *s) {
     std::string const str(s);
@@ -254,6 +264,71 @@ int main(int argc, char** argv)
       hartids.push_back(n);
       if (stream.peek() == ',') stream.ignore();
     }
+  };
+
+  auto const adele_parser = [&](const char *s) {
+    std::string const str(s);
+    std::stringstream stream(str);
+    std::string token;
+
+    while(std::getline(stream, token, ',')) {
+      std::stringstream stream2(token);
+
+      std::string key, value;
+      std::getline(stream2, key, ':');
+      if(std::getline(stream2, value, ':')) {
+
+        adele_params[key].int_value = strtol(value.c_str(), NULL, 10);
+        adele_params[key].double_value = strtod(value.c_str(), NULL);
+        adele_params[key].string_value =  (char*)value.c_str();
+
+
+        //std::cerr << "Param: " << key << " value: " << adele_params[key].string_value << std::endl;
+        //std::cerr << "int value: " << adele_params[key].int_value << std::endl;
+        //std::cerr << "double value: " << adele_params[key].double_value << std::endl;
+
+      } else {
+        std::cerr << "You have to specify a value to each AxPIKE param\n" << std::endl;
+        std::cerr << "\t Param " << key  << " has no value. ";
+        std::cerr << "You can specify this value through --adele="<< key << ":<value>\n" << std::endl;
+        exit(-1);
+      }
+    }
+
+  };
+
+  auto const adele_activate_parser = [&](const char *s) {
+    std::string const str(s);
+    std::stringstream stream(str);
+    std::string token;
+
+    while(std::getline(stream, token, ',')) {
+      std::stringstream stream2(token);
+
+      std::string key, value;
+      std::getline(stream2, key, ':');
+      while(std::getline(stream2, value, ':')) {
+        adele_activate[strtol(key.c_str(), NULL, 10)].push_back(value);
+      }
+    }
+
+  };
+
+  auto const adele_deactivate_parser = [&](const char *s) {
+    std::string const str(s);
+    std::stringstream stream(str);
+    std::string token;
+
+    while(std::getline(stream, token, ',')) {
+      std::stringstream stream2(token);
+
+      std::string key, value;
+      std::getline(stream2, key, ':');
+      while(std::getline(stream2, value, ':')) {
+        adele_deactivate[strtol(key.c_str(), NULL, 10)].push_back(value);
+      }
+    }
+
   };
 
   auto const device_parser = [&plugin_devices](const char *s) {
@@ -357,6 +432,11 @@ int main(int argc, char** argv)
                 [&](const char* s){log_commits = true;});
   parser.option(0, "log", 1,
                 [&](const char* s){log_path = s;});
+  parser.option(0, "adele", 1, adele_parser);
+  parser.option(0, "adele-seed", 1, 
+      [&](const char* s){ std::cerr << "adele-seed: " << s << std::endl; srand(atoi(s));});
+  parser.option(0, "adele-activate", 1, adele_activate_parser);
+  parser.option(0, "adele-deactivate", 1, adele_deactivate_parser);
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -394,8 +474,10 @@ int main(int argc, char** argv)
 
   sim_t s(isa, priv, varch, nprocs, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, plugin_devices, htif_args,
-      std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file);
+      std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
+      adele_params, adele_activate, adele_deactivate);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
+  simulation = &s;
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
       new jtag_dtm_t(&s.debug_module, dmi_rti));
   if (use_rbb) {

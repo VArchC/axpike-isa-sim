@@ -41,7 +41,8 @@ static void handle_signal(int sig)
 }
 
 htif_t::htif_t()
-  : mem(this), entry(DRAM_BASE), sig_addr(0), sig_len(0),
+  : ax_htif(),
+    mem(this), entry(DRAM_BASE), sig_addr(0), sig_len(0),
     tohost_addr(0), fromhost_addr(0), exitcode(0), stopped(false),
     syscall_proxy(this)
 {
@@ -358,6 +359,7 @@ void htif_t::register_devices()
 {
   device_list.register_device(&syscall_proxy);
   device_list.register_device(&bcd);
+  device_list.register_device(&ax_htif);
   for (auto d : dynamic_devices)
     device_list.register_device(d);
 }

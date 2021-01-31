@@ -1,0 +1,60 @@
+adele_subproject_deps = \
+	fesvr \
+	acadp \
+
+adele_install_prog_srcs = \
+
+adele_hdrs = \
+	axpike_control.h \
+	axpike_stats.h \
+	axpike_storage.h \
+	axpike_htif.h \
+	$(adele_gen_hdrs) \
+
+adele_srcs = \
+	axpike_control.cc \
+	axpike_stats.cc \
+	axpike_storage.cc \
+	axpike_htif.cc \
+	$(adele_gen_srcs) \
+
+adele_test_srcs = \
+
+adele_gen_hdrs = \
+	axpike_wrappers.h \
+	insn_count.h \
+
+adele_install_hdrs = \
+	axpike_iface.h \
+
+adele_gen_srcs = \
+	axpike_setup.cc \
+	axpike_wrappers.cc \
+
+insn_approx.list axpike_wrappers.cc axpike_wrappers.h axpike_setup.cc $(src_dir)/adele/axpike_iface.h: acadp insn_list.h $(src_dir)/adele/adf/*.adf axpike_models.cc
+	mkdir -p insns_approx
+	./acadp insn_list.h $(src_dir)/adele/adf/*.adf
+	cp axpike_iface.h ../adele/
+
+axpike_models.cc: $(src_dir)/adele/adf/*.cc
+	@echo "" > axpike_models.cc
+	@for f in $^; do \
+		cat $$f >> axpike_models.cc; \
+		echo >> axpike_models.cc; \
+	done
+
+insns_approx/%.h: insn_approx.list insn_list.h 
+	@echo "Creating insns_approx/$*.h"
+	@if grep -Fxq "$*" $<; \
+	then \
+		echo "#define INSN_$*_APPROX 1" > $@; \
+	else \
+		echo "#define INSN_$*_APPROX 0" > $@; \
+	fi
+	@echo -n "#define INSN_$*_ID " >> $@
+	@echo $$(( $$(grep -Fxn "DEFINE_INSN($*)" insn_list.h | grep -Eo '^[^:]+') -1)) >> $@
+
+insn_count.h: insn_list.h
+	@echo "Creating insn_count.h"
+	@echo -n "#define INSN_COUNT " >> $@
+	@echo $$(grep "^.*$$" insn_list.h -c) >> $@

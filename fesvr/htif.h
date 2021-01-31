@@ -7,6 +7,7 @@
 #include "syscall.h"
 #include "device.h"
 #include "byteorder.h"
+#include "axpike_htif.h"
 #include <string.h>
 #include <map>
 #include <vector>
@@ -28,6 +29,8 @@ class htif_t : public chunked_memif_t
   int exit_code();
 
   virtual memif_t& memif() { return mem; }
+
+  AxPIKE::HTIF ax_htif;
 
   template<typename T> inline T from_target(target_endian<T> n) const
   {

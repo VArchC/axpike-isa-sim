@@ -1,0 +1,5 @@
+AC_CHECK_PROG(FLEX, flex, flex)
+AS_IF([test -z "$FLEX"], [AC_MSG_ERROR([flex not found, please install flex package])])
+
+AC_CHECK_PROG(BISON, bison, bison)
+AS_IF([test -z "$BISON"], [AC_MSG_ERROR([bison not found, please install bison package])])

@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@prefix@
+libdir=${prefix}/@libdir@
+includedir=${prefix}/@includedir@
+
+Name: riscv-adele
+Description: RISC-V AxPIKE ADeLe Description Parser
+Version: git
+Libs: -Wl,-rpath,${libdir} -L${libdir} -lacadp
+Cflags: -I${includedir}
+URL: http://varchc.github.io/adele

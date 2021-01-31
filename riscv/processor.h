@@ -14,6 +14,13 @@
 #include "debug_rom_defines.h"
 #include "entropy_source.h"
 
+#include "axpike_control.h"
+
+struct adele_params_t {
+  char* string_value;
+  int int_value;
+  double double_value;
+};
 
 class processor_t;
 class mmu_t;
@@ -152,6 +159,8 @@ struct type_sew_t<64>
 // architectural state of a RISC-V hart
 struct state_t
 {
+  state_t(AxPIKE::Control* c) : XPR(c, "XPR"), FPR(c, "FPR") {};
+
   void reset(reg_t max_isa);
 
   static const int num_triggers = 4;
@@ -268,10 +277,18 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t
 {
 public:
+  friend class AxPIKE::Stats;
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, uint32_t id, bool halt_on_reset,
+              simif_t* sim, uint32_t id, 
+              std::unordered_map<std::string, adele_params_t> adele_params,
+              std::vector<std::string> adele_activate,
+              std::vector<std::string> adele_deactivate,
+              bool halt_on_reset,
               FILE *log_file);
   ~processor_t();
+
+  AxPIKE::Control ax_control;
+  std::unordered_map<std::string, adele_params_t> get_adele_params();
 
   void set_debug(bool value);
   void set_histogram(bool value);
@@ -453,6 +470,8 @@ private:
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];
 
+  std::unordered_map<std::string, adele_params_t> adele_params;
+
   void take_pending_interrupt() { take_interrupt(state.mip & state.mie); }
   void take_interrupt(reg_t mask); // take first enabled interrupt in mask
   void take_trap(trap_t& t, reg_t epc); // take an exception
@@ -551,6 +570,7 @@ reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);
 #define REGISTER_INSN(proc, name, match, mask) \
   extern reg_t rv32_##name(processor_t*, insn_t, reg_t); \
   extern reg_t rv64_##name(processor_t*, insn_t, reg_t); \
-  proc->register_insn((insn_desc_t){match, mask, rv32_##name, rv64_##name});
+  proc->register_insn((insn_desc_t){match, mask, rv32_##name, rv64_##name});\
+  AxPIKE::Stats::insns.push_back(#name);
 
 #endif
