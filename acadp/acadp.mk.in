@@ -1,7 +1,7 @@
 acadp_subproject_deps = \
 
 acadp_install_prog_c_srcs = \
-#	acadp.c
+	acadp.c
 
 acadp_hdrs = \
 	acadp.h

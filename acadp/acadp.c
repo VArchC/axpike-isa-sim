@@ -198,7 +198,7 @@ void create_setup_impl() {
   approxid = 0;
   papprox = NULL;
   while (acadp_get_approx(&papprox)) {
-    fprintf(fp. "\tthis->approxes[\"%s\"] = %d;\n", acadp_approx_get_name(papprox), approxid);
+    fprintf(fp, "\tthis->approxes[\"%s\"] = %d;\n", acadp_approx_get_name(papprox), approxid);
     approxid++;
   }
 
