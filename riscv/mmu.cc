@@ -158,7 +158,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
       c = &proc->ax_control;
       if (c->DM_memrd[c->cur_insn_id] != NULL) {
         c->s.type = AxPIKE::Source::MEM;
-        c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;
+        c->s.hierarchy = AxPIKE::Source::NA;
         c->s.name = "Mem";
         c->s.address = addr;
         c->s.paddress = paddr;
