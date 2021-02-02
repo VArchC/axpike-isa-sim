@@ -26,7 +26,7 @@ class cache_sim_t
   cache_sim_t(const cache_sim_t& rhs);
   virtual ~cache_sim_t();
 
-  void access(uint64_t addr, size_t bytes, bool store);
+  void access(uint64_t addr, size_t bytes, bool store, memtracer_log_t *log);
   void print_stats();
   void set_miss_handler(cache_sim_t* mh) { miss_handler = mh; }
   void set_log(bool _log) { log = _log; }
@@ -107,9 +107,9 @@ class icache_sim_t : public cache_memtracer_t
   {
     return type == FETCH;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  void trace(uint64_t addr, size_t bytes, access_type type, memtracer_log_t *log)
   {
-    if (type == FETCH) cache->access(addr, bytes, false);
+    if (type == FETCH) cache->access(addr, bytes, false, log);
   }
 };
 
@@ -121,9 +121,9 @@ class dcache_sim_t : public cache_memtracer_t
   {
     return type == LOAD || type == STORE;
   }
-  void trace(uint64_t addr, size_t bytes, access_type type)
+  void trace(uint64_t addr, size_t bytes, access_type type, memtracer_log_t *log)
   {
-    if (type == LOAD || type == STORE) cache->access(addr, bytes, type == STORE);
+    if (type == LOAD || type == STORE) cache->access(addr, bytes, type == STORE, log);
   }
 };
 

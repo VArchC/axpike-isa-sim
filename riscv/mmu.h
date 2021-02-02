@@ -112,7 +112,6 @@ public:
         datatype##_t data = from_target(*(target_endian<datatype##_t>*)bypass); \
         if (likely(c != NULL) && c->DM_memrd[c->cur_insn_id] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
-          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
           c->s.name = "Mem";\
           c->s.address = addr;\
           c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
@@ -134,7 +133,6 @@ public:
         if (proc) READ_MEM(addr, size); \
         if (likely(c != NULL) && c->DM_memrd[c->cur_insn_id] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
-          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
           c->s.name = "Mem";\
           c->s.address = addr;\
           c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
@@ -201,7 +199,6 @@ public:
         if (proc) WRITE_MEM(addr, val, size); \
         if (likely(c != NULL) && c->DM_memwr[c->cur_insn_id] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
-          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
           c->s.name = "Mem";\
           c->s.address = addr;\
           c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
@@ -221,7 +218,6 @@ public:
         if (proc) WRITE_MEM(addr, val, size); \
         if (likely(c != NULL) && c->DM_memwr[c->cur_insn_id] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
-          c->s.hierarchy = AxPIKE::Source::NA|AxPIKE::Source::TLB;\
           c->s.name = "Mem";\
           c->s.address = addr;\
           c->s.paddress = tlb_data[vpn % TLB_ENTRIES].target_offset + addr;\
@@ -375,7 +371,8 @@ public:
     reg_t paddr = tlb_entry.target_offset + addr;;
     if (tracer.interested_in_range(paddr, paddr + 1, FETCH)) {
       entry->tag = -1;
-      tracer.trace(paddr, length, FETCH);
+      memtracer_log_t log;
+      tracer.trace(paddr, length, FETCH, &log);
     }
     return entry;
   }

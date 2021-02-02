@@ -4,6 +4,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "memtracer.h"
+
 namespace AxPIKE {
   class Control;
   class WrapperList;
@@ -17,12 +19,13 @@ namespace AxPIKE {
     typedef enum {MEM, REGBANK, REG} type_t;
     typedef enum {READ, WRITE} op_t;
     Source() {};
-    Source(type_t _type, uint8_t _hierarchy, std::string _name, uint64_t _address, uint64_t _paddress, op_t _op, size_t _width, void* _bypass) : type(_type), hierarchy(_hierarchy), name(_name), address(_address), paddress(_paddress), op(_op), width(_width), bypass(_bypass) {};
+    Source(type_t _type, memtracer_log_t _memtracer_log, std::string _name, uint64_t _address, uint64_t _paddress, op_t _op, size_t _width, void* _bypass) : type(_type), memtracer_log(_memtracer_log), name(_name), address(_address), paddress(_paddress), op(_op), width(_width), bypass(_bypass) {};
     type_t type;
-    uint8_t hierarchy;
+    memtracer_log_t memtracer_log;
     std::string name;
     uint64_t address;
     uint64_t paddress;
+    uint64_t wb_address;
     op_t op;
     size_t width;
     void* bypass;

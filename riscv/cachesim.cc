@@ -121,10 +121,23 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
   return victim;
 }
 
-void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
+void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, memtracer_log_t *log)
 {
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
+
+  int my_level = name == "L2$"? CACHE_LEVEL_L2 : (name == "I$" ? CACHE_LEVEL_IC : CACHE_LEVEL_DC );
+  switch(my_level) {
+    case CACHE_LEVEL_DC:
+      log->dc_miss = true;
+      break;
+    case CACHE_LEVEL_IC:
+      log->ic_miss = true;
+      break;
+    case CACHE_LEVEL_L2:
+      log->l2_miss = true;
+      break;
+  }
 
   uint64_t* hit_way = check_tag(addr);
   if (likely(hit_way != NULL))
@@ -148,12 +161,13 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store)
   {
     uint64_t dirty_addr = (victim & ~(VALID | DIRTY)) << idx_shift;
     if (miss_handler)
-      miss_handler->access(dirty_addr, linesz, true);
+      miss_handler->access(dirty_addr, linesz, true, log);
     writebacks++;
+    log->wb_address = dirty_addr;
   }
 
   if (miss_handler)
-    miss_handler->access(addr & ~(linesz-1), linesz, false);
+    miss_handler->access(addr & ~(linesz-1), linesz, false, log);
 
   if (store)
     *check_tag(addr) |= DIRTY;
