@@ -148,7 +148,7 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, memtracer_log_
   }
 
   store ? write_misses++ : read_misses++;
-  if (log)
+  if (this->log)
   {
     std::cerr << name << " "
               << (store ? "write" : "read") << " miss 0x"
