@@ -361,6 +361,7 @@ void create_wrappers_impl() {
   fprintf(fp, "#define PM inline __attribute__((always_inline)) bool AxPIKE::Models::Probability::\n");
   fprintf(fp, "#define EM inline __attribute__((always_inline)) double AxPIKE::Models::Energy::\n");
   fprintf(fp, "#define OP p->ax_control.OP\n");
+  fprintf(fp, "#define LOG(file, msg...) p->ax_control.log.write(file, msg)\n");
   fprintf(fp, "#include \"axpike_models.cc\"\n");
   fprintf(fp, "#undef IM\n");
   fprintf(fp, "#undef DM\n");

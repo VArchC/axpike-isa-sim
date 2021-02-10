@@ -6,6 +6,7 @@ AxPIKE::Control::Control(processor_t* _p, std::vector<std::string> adele_activat
   active_approx(0),
   cur_insn_id(0),
   stats(_p, cur_insn_id, active_approx),
+  log(_p),
   p(_p),
   OP(cur_insn_id) {
     this->initModels();

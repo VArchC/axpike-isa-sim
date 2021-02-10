@@ -9,6 +9,7 @@
 #include <limits>
 #include "axpike_stats.h"
 #include "axpike_storage.h"
+#include "axpike_log.h"
 #include "insn_count.h"
 
 class processor_t;
@@ -75,6 +76,7 @@ namespace AxPIKE {
       uint32_t cur_insn_id;
       Stats stats;
       Source s;
+      Log log;
 
       processor_t* p;
       insn_t insn;

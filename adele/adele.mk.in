@@ -9,6 +9,7 @@ adele_hdrs = \
 	axpike_stats.h \
 	axpike_storage.h \
 	axpike_htif.h \
+	axpike_log.h \
 	$(adele_gen_hdrs) \
 
 adele_srcs = \
@@ -16,6 +17,7 @@ adele_srcs = \
 	axpike_stats.cc \
 	axpike_storage.cc \
 	axpike_htif.cc \
+	axpike_log.cc \
 	$(adele_gen_srcs) \
 
 adele_test_srcs = \
