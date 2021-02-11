@@ -22,17 +22,20 @@ void AxPIKE::LogFile::write(std::string& msg) {
 void AxPIKE::LogFile::write(const char* format, std::va_list& args) {
 
 
-  char* buff = new char[1];
+  char* buff = new char[1024];
   int n;
   std::va_list targs;
   va_copy (targs, args);
 
-  n = std::vsnprintf(buff, 1, format, targs);
+  n = std::vsnprintf(buff, 1024, format, targs);
   va_end(targs);
-  if (n > 0) {
+  if (n > 1023) {
     delete[] buff;
     buff = new char[n+1];
     std::vsnprintf(buff, n+1, format, args);
+    fp << buff;
+  }
+  if (n > 0) {
     fp << buff;
   }
   else {
