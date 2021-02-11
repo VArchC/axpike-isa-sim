@@ -1,4 +1,5 @@
 customext_subproject_deps = \
+	adele \
 	spike_main \
 	riscv \
 	disasm \
@@ -11,3 +12,7 @@ customext_srcs = \
 customext_CFLAGS = -fPIC
 
 customext_install_shared_lib = yes
+
+cflush.o: insn_count.h
+
+dummy_rocc.o: insn_count.h

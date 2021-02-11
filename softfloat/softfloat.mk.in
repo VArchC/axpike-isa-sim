@@ -1,4 +1,5 @@
-softfloat_subproject_deps =
+softfloat_subproject_deps = \
+	adele \
 
 softfloat_hdrs = \
   internals.h \

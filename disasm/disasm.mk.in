@@ -1,3 +1,6 @@
+disasm_subproject_deps = \
+	adele \
+
 disasm_CFLAGS = -fPIC
 
 disasm_srcs = \
@@ -5,3 +8,5 @@ disasm_srcs = \
   regnames.cc \
 
 disasm_install_lib = yes
+
+regnames.o: insn_count.h

@@ -4,6 +4,8 @@ adele_subproject_deps = \
 
 adele_install_prog_srcs = \
 
+adele_CFLAGS = -fPIC
+
 adele_hdrs = \
 	axpike_control.h \
 	axpike_stats.h \
