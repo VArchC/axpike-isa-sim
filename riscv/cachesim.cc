@@ -81,23 +81,23 @@ void cache_sim_t::print_stats()
 
   float mr = 100.0f*(read_misses+write_misses)/(read_accesses+write_accesses);
 
-  std::cout << std::setprecision(3) << std::fixed;
-  std::cout << name << " ";
-  std::cout << "Bytes Read:            " << bytes_read << std::endl;
-  std::cout << name << " ";
-  std::cout << "Bytes Written:         " << bytes_written << std::endl;
-  std::cout << name << " ";
-  std::cout << "Read Accesses:         " << read_accesses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Write Accesses:        " << write_accesses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Read Misses:           " << read_misses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Write Misses:          " << write_misses << std::endl;
-  std::cout << name << " ";
-  std::cout << "Writebacks:            " << writebacks << std::endl;
-  std::cout << name << " ";
-  std::cout << "Miss Rate:             " << mr << '%' << std::endl;
+  std::cerr << std::setprecision(3) << std::fixed;
+  std::cerr << name << " ";
+  std::cerr << "Bytes Read:            " << bytes_read << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Bytes Written:         " << bytes_written << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Read Accesses:         " << read_accesses << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Write Accesses:        " << write_accesses << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Read Misses:           " << read_misses << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Write Misses:          " << write_misses << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Writebacks:            " << writebacks << std::endl;
+  std::cerr << name << " ";
+  std::cerr << "Miss Rate:             " << mr << '%' << std::endl;
 }
 
 uint64_t* cache_sim_t::check_tag(uint64_t addr)
@@ -121,23 +121,12 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
   return victim;
 }
 
-void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, memtracer_log_t *log)
+void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, memtracer_log_t *memtracer_log)
 {
   store ? write_accesses++ : read_accesses++;
   (store ? bytes_written : bytes_read) += bytes;
 
   int my_level = name == "L2$"? CACHE_LEVEL_L2 : (name == "I$" ? CACHE_LEVEL_IC : CACHE_LEVEL_DC );
-  switch(my_level) {
-    case CACHE_LEVEL_DC:
-      log->dc_miss = true;
-      break;
-    case CACHE_LEVEL_IC:
-      log->ic_miss = true;
-      break;
-    case CACHE_LEVEL_L2:
-      log->l2_miss = true;
-      break;
-  }
 
   uint64_t* hit_way = check_tag(addr);
   if (likely(hit_way != NULL))
@@ -148,6 +137,19 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, memtracer_log_
   }
 
   store ? write_misses++ : read_misses++;
+
+  switch(my_level) {
+    case CACHE_LEVEL_DC:
+      memtracer_log->dc_miss = true;
+      break;
+    case CACHE_LEVEL_IC:
+      memtracer_log->ic_miss = true;
+      break;
+    case CACHE_LEVEL_L2:
+      memtracer_log->l2_miss = true;
+      break;
+  }
+
   if (this->log)
   {
     std::cerr << name << " "
@@ -161,13 +163,13 @@ void cache_sim_t::access(uint64_t addr, size_t bytes, bool store, memtracer_log_
   {
     uint64_t dirty_addr = (victim & ~(VALID | DIRTY)) << idx_shift;
     if (miss_handler)
-      miss_handler->access(dirty_addr, linesz, true, log);
+      miss_handler->access(dirty_addr, linesz, true, memtracer_log);
     writebacks++;
-    log->wb_address = dirty_addr;
+    memtracer_log->wb_address = dirty_addr;
   }
 
   if (miss_handler)
-    miss_handler->access(addr & ~(linesz-1), linesz, false, log);
+    miss_handler->access(addr & ~(linesz-1), linesz, false, memtracer_log);
 
   if (store)
     *check_tag(addr) |= DIRTY;

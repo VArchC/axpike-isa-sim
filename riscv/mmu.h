@@ -20,6 +20,12 @@ const reg_t PGSIZE = 1 << PGSHIFT;
 const reg_t PGMASK = ~(PGSIZE-1);
 #define MAX_PADDR_BITS 56 // imposed by Sv39 / Sv48
 
+#define MEMTRACER_LOG_INITIALIZE \
+    memtracer_log.dc_miss=false;\
+    memtracer_log.ic_miss=false;\
+    memtracer_log.l2_miss=false;\
+    memtracer_log.wb_address=0x0;
+
 struct insn_fetch_t
 {
   insn_func_t func;
@@ -57,6 +63,7 @@ class mmu_t
 private:
   std::map<reg_t, reg_t> alloc_cache;
   std::vector<std::pair<reg_t, reg_t >> addr_tbl;
+  memtracer_log_t memtracer_log;
 public:
   mmu_t(simif_t* sim, processor_t* proc);
   ~mmu_t();
@@ -371,8 +378,8 @@ public:
     reg_t paddr = tlb_entry.target_offset + addr;;
     if (tracer.interested_in_range(paddr, paddr + 1, FETCH)) {
       entry->tag = -1;
-      memtracer_log_t log;
-      tracer.trace(paddr, length, FETCH, &log);
+      MEMTRACER_LOG_INITIALIZE
+      tracer.trace(paddr, length, FETCH, &memtracer_log);
     }
     return entry;
   }

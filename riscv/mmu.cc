@@ -5,6 +5,7 @@
 #include "simif.h"
 #include "processor.h"
 
+
 mmu_t::mmu_t(simif_t* sim, processor_t* proc)
  : sim(sim), proc(proc),
 #ifdef RISCV_ENABLE_DUAL_ENDIAN
@@ -148,9 +149,11 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
     memcpy(bytes, host_addr, len);
-    memtracer_log_t log;
+
+    MEMTRACER_LOG_INITIALIZE
+
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, LOAD))
-      tracer.trace(paddr, len, LOAD, &log);
+      tracer.trace(paddr, len, LOAD, &memtracer_log);
     else
       refill_tlb(addr, paddr, host_addr, LOAD);
 
@@ -159,7 +162,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
       c = &proc->ax_control;
       if (c->DM_memrd[c->cur_insn_id] != NULL) {
         c->s.type = AxPIKE::Source::MEM;
-        c->s.memtracer_log = log;
+        c->s.memtracer_log = memtracer_log;
         c->s.name = "Mem";
         c->s.address = addr;
         c->s.paddress = paddr;
@@ -194,9 +197,11 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlat
   }
 
   if (auto host_addr = sim->addr_to_mem(paddr)) {
-    memtracer_log_t log;
+
+    MEMTRACER_LOG_INITIALIZE
+
     if (tracer.interested_in_range(paddr, paddr + PGSIZE, STORE))
-      tracer.trace(paddr, len, STORE, &log);
+      tracer.trace(paddr, len, STORE, &memtracer_log);
     else
       refill_tlb(addr, paddr, host_addr, STORE);
 
@@ -205,7 +210,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlat
       c = &proc->ax_control;
       if (c->DM_memwr[c->cur_insn_id] != NULL) {
         c->s.type = AxPIKE::Source::MEM;
-        c->s.memtracer_log = log;
+        c->s.memtracer_log = memtracer_log;
         c->s.name = "Mem";
         c->s.address = addr;
         c->s.paddress = paddr;
