@@ -77,6 +77,7 @@ namespace AxPIKE {
       Stats stats;
       Source s;
       Log log;
+      CustomCounters::Counters counters;
 
       processor_t* p;
       insn_t insn;

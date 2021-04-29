@@ -1,4 +1,5 @@
 build/
+adele/axpike_iface.h
 *.gch
 autom4te.cache/
 .*.swp

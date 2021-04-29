@@ -88,3 +88,27 @@ void AxPIKE::Log::write(const char* file, std::ostream& msg) {
   LogFile* log = this->get(file);
   log->write(msg);
 };
+
+AxPIKE::CustomCounters::Counters::~Counters() {
+  if (counters.empty()) {
+    std::cerr << "There are no AxPIKE custom counters to be written." << std::endl;
+  }
+  else {
+    std::fstream fp;
+    std::string file = "AxPIKE_CustomCounters_pid" + std::to_string(::getpid()) + "_hart" + std::to_string(p->get_id()) + ".csv";
+    std::cerr << "Writing AxPIKE custom counters to " << file << std::endl;
+    fp.open(file.c_str(), std::ios::out | std::ios::trunc);
+    fp << "\"Type\", \"Name\", \"Value\"" << std::endl;
+
+    for (auto& counter : counters) {
+      for (auto& c: *(counter.second)) {
+        fp << "\"" << counter.first << "\", \"" << c.first << "\", ";
+        (c.second)->save(fp);
+        fp << std::endl;
+      }
+    }
+
+    fp.close();
+  }
+}
+
