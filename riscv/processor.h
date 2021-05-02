@@ -277,6 +277,7 @@ static int cto(reg_t val)
 class processor_t : public abstract_device_t
 {
 public:
+  friend class AxPIKE::Control;
   friend class AxPIKE::Stats;
   processor_t(const char* isa, const char* priv, const char* varch,
               simif_t* sim, uint32_t id, 

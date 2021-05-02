@@ -13,16 +13,16 @@ reg_t rv32_NAME(processor_t* p, insn_t insn, reg_t pc)
   p->ax_control.pc = pc;
   p->ax_control.xlen = xlen;
   p->ax_control.npc = npc;
-  if (p->ax_control.EM[INSN_NAME_ID] != NULL) {
-    p->ax_control.EM[INSN_NAME_ID](p, insn, pc, xlen, npc, NULL, NULL);
+  if (p->ax_control.EM[(INSN_NAME_ID << 2) | p->ax_control.prv] != NULL) {
+    p->ax_control.EM[(INSN_NAME_ID << 2) | p->ax_control.prv](p, insn, pc, xlen, npc, NULL, NULL);
   }
   else {
     AxPIKE::Wrappers::Energy::__default__(p, insn, pc, xlen, npc, NULL, NULL);
   }
 
 #if INSN_NAME_APPROX
-  if (p->ax_control.IM[INSN_NAME_ID] != NULL) {
-    p->ax_control.IM[INSN_NAME_ID](p, insn, pc, xlen, npc, NULL, NULL);
+  if (p->ax_control.IM[(INSN_NAME_ID << 2) | p->ax_control.prv] != NULL) {
+    p->ax_control.IM[(INSN_NAME_ID << 2) | p->ax_control.prv](p, insn, pc, xlen, npc, NULL, NULL);
   }
   else {
     #include "insns/NAME.h"
@@ -45,16 +45,16 @@ reg_t rv64_NAME(processor_t* p, insn_t insn, reg_t pc)
   p->ax_control.pc = pc;
   p->ax_control.xlen = xlen;
   p->ax_control.npc = npc;
-  if (p->ax_control.EM[INSN_NAME_ID] != NULL) {
-    p->ax_control.EM[INSN_NAME_ID](p, insn, pc, xlen, npc, NULL, NULL);
+  if (p->ax_control.EM[(INSN_NAME_ID << 2) | p->ax_control.prv] != NULL) {
+    p->ax_control.EM[(INSN_NAME_ID << 2) | p->ax_control.prv](p, insn, pc, xlen, npc, NULL, NULL);
   }
   else {
     AxPIKE::Wrappers::Energy::__default__(p, insn, pc, xlen, npc, NULL, NULL);
   }
 
 #if INSN_NAME_APPROX
-  if (p->ax_control.IM[INSN_NAME_ID] != NULL) {
-    p->ax_control.IM[INSN_NAME_ID](p, insn, pc, xlen, npc, NULL, NULL);
+  if (p->ax_control.IM[(INSN_NAME_ID << 2) | p->ax_control.prv] != NULL) {
+    p->ax_control.IM[(INSN_NAME_ID << 2) | p->ax_control.prv](p, insn, pc, xlen, npc, NULL, NULL);
   }
   else {
     #include "insns/NAME.h"

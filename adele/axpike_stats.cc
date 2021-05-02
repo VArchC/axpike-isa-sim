@@ -265,8 +265,9 @@ void AxPIKE::Stats::insnDispatch(double energy) {
 }
 
 void AxPIKE::Stats::setStats() {
-  icounter = icounter_map[active_approx][section];
-  ecounter = ecounter_map[active_approx][section];
+  uint64_t& prv = p->state.prv;
+  icounter = icounter_map[active_approx[prv]][section];
+  ecounter = ecounter_map[active_approx[prv]][section];
   if (!icounter) {
     icounter = new uint64_t[INSN_COUNT<<2];
     ecounter = new double[INSN_COUNT<<2];
@@ -274,7 +275,7 @@ void AxPIKE::Stats::setStats() {
       icounter[i] = 0;
       ecounter[i] = 0.0;
     }
-    icounter_map[active_approx][section] = icounter;
-    ecounter_map[active_approx][section] = ecounter;
+    icounter_map[active_approx[prv]][section] = icounter;
+    ecounter_map[active_approx[prv]][section] = ecounter;
   }
 }

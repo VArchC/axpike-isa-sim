@@ -160,7 +160,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
     AxPIKE::Control* c = NULL;
     if (likely(proc != NULL)) {
       c = &proc->ax_control;
-      if (c->DM_memrd[c->cur_insn_id] != NULL) {
+      if (c->DM_memrd[(c->cur_insn_id << 2) | c->prv] != NULL) {
         c->s.type = AxPIKE::Source::MEM;
         c->s.memtracer_log = memtracer_log;
         c->s.name = "Mem";
@@ -169,7 +169,7 @@ void mmu_t::load_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlate
         c->s.op = AxPIKE::Source::READ;
         c->s.width = len;
         c->s.bypass = host_addr;
-        (c->DM_memrd[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), bytes);
+        (c->DM_memrd[(c->cur_insn_id << 2) | c->prv])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), bytes);
       }
     }
 
@@ -208,7 +208,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlat
     AxPIKE::Control* c = NULL;
     if (likely(proc != NULL)) {
       c = &proc->ax_control;
-      if (c->DM_memwr[c->cur_insn_id] != NULL) {
+      if (c->DM_memwr[(c->cur_insn_id << 2) | c->prv] != NULL) {
         c->s.type = AxPIKE::Source::MEM;
         c->s.memtracer_log = memtracer_log;
         c->s.name = "Mem";
@@ -217,7 +217,7 @@ void mmu_t::store_slow_path(reg_t addr, reg_t len, uint8_t* bytes, uint32_t xlat
         c->s.op = AxPIKE::Source::WRITE;
         c->s.width = len;
         c->s.bypass = host_addr;
-        (c->DM_memwr[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), bytes);
+        (c->DM_memwr[(c->cur_insn_id << 2) | c->prv])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), bytes);
       }
     }
     memcpy(host_addr, bytes, len);

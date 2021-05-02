@@ -24,18 +24,18 @@ template <typename T> void AxPIKE::Word<T>::set(AxPIKE::Control* _c, AxPIKE::Sou
 }
 
 template <typename T> void AxPIKE::Word<T>::write (T _value) {
-  if (likely(DM_wr != NULL) && DM_wr[c->cur_insn_id] != NULL) {
+  if (likely(DM_wr != NULL) && DM_wr[(c->cur_insn_id << 2) | c->prv] != NULL) {
     source_t s(type, memtracer_log, name, address, address, source_t::WRITE, sizeof(T), &(this->value));
-    (DM_wr[c->cur_insn_id])(c->p, c->insn, c->pc, c->xlen, c->npc, &s, &_value);
+    (DM_wr[(c->cur_insn_id << 2) | c->prv])(c->p, c->insn, c->pc, c->xlen, c->npc, &s, &_value);
   }
   this->value = _value;
 }
 
 template <typename T> T AxPIKE::Word<T>::read () const {
   T faulty = this->value;
-  if (likely(DM_rd != NULL) && DM_rd[c->cur_insn_id] != NULL) {
+  if (likely(DM_rd != NULL) && DM_rd[(c->cur_insn_id << 2) | c->prv] != NULL) {
     source_t s(type, memtracer_log, name, address, address, source_t::READ, sizeof(T), &faulty);
-    (DM_rd[c->cur_insn_id])(c->p, c->insn, c->pc, c->xlen, c->npc, &s, &faulty);
+    (DM_rd[(c->cur_insn_id << 2) | c->prv])(c->p, c->insn, c->pc, c->xlen, c->npc, &s, &faulty);
   }
   return faulty;
 }

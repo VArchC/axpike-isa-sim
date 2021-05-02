@@ -19,12 +19,12 @@ namespace AxPIKE {
 
       processor_t* p;
       uint32_t& cur_insn_id;
-      uint64_t& active_approx;
+      uint64_t* active_approx;
       int seq;
 
     public:
       uint8_t section;
-      Stats(processor_t* _p, uint32_t& _cur_insn_id, uint64_t& _active_approx) : p(_p), cur_insn_id(_cur_insn_id), active_approx(_active_approx), seq(0), section(0) {
+      Stats(processor_t* _p, uint32_t& _cur_insn_id, uint64_t* _active_approx) : p(_p), cur_insn_id(_cur_insn_id), active_approx(_active_approx), seq(0), section(0) {
         AxPIKE::Stats::initStats();
         setStats();
       };
