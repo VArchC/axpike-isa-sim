@@ -16,6 +16,7 @@
 #include "../VERSION"
 
 sim_t* simulation;
+using std::string;
 
 static void help(int exit_code = 1)
 {
@@ -29,6 +30,9 @@ static void help(int exit_code = 1)
   fprintf(stderr, "  -d                    Interactive debug mode\n");
   fprintf(stderr, "  -g                    Track histogram of PCs\n");
   fprintf(stderr, "  -l                    Generate a log of execution\n");
+#ifdef HAVE_BOOST_ASIO
+  fprintf(stderr, "  -s                    Command I/O via socket (use with -d)\n");
+#endif
   fprintf(stderr, "  -h, --help            Print this help message\n");
   fprintf(stderr, "  -H                    Start halted, allowing a debugger to connect\n");
   fprintf(stderr, "  --isa=<name>          RISC-V ISA string [default %s]\n", DEFAULT_ISA);
@@ -47,6 +51,7 @@ static void help(int exit_code = 1)
   fprintf(stderr, "                          The extlib flag for the library must come first.\n");
   fprintf(stderr, "  --log-cache-miss      Generate a log of cache miss\n");
   fprintf(stderr, "  --extension=<name>    Specify RoCC Extension\n");
+  fprintf(stderr, "                          This flag can be used multiple times.\n");
   fprintf(stderr, "  --extlib=<name>       Shared library to load\n");
   fprintf(stderr, "                        This flag can be used multiple times.\n");
   fprintf(stderr, "  --rbb-port=<port>     Listen on <port> for remote bitbang connection\n");
@@ -96,11 +101,14 @@ static std::ifstream::pos_type get_file_size(const char *filename)
 }
 
 static void read_file_bytes(const char *filename,size_t fileoff,
-                            char *read_buf, size_t read_sz)
+                            mem_t* mem, size_t memoff, size_t read_sz)
 {
   std::ifstream in(filename, std::ios::in | std::ios::binary);
   in.seekg(fileoff, std::ios::beg);
-  in.read(read_buf, read_sz);
+
+  std::vector<char> read_buf(read_sz, 0);
+  in.read(&read_buf[0], read_sz);
+  mem->store(memoff, read_sz, (uint8_t*)&read_buf[0]);
 }
 
 bool sort_mem_region(const std::pair<reg_t, mem_t*> &a,
@@ -117,26 +125,25 @@ void merge_overlapping_memory_regions(std::vector<std::pair<reg_t, mem_t*>>& mem
   // check the user specified memory regions and merge the overlapping or
   // eliminate the containing parts
   std::sort(mems.begin(), mems.end(), sort_mem_region);
-  reg_t start_page = 0, end_page = 0;
-  std::vector<std::pair<reg_t, mem_t*>>::reverse_iterator it = mems.rbegin();
-  std::vector<std::pair<reg_t, mem_t*>>::reverse_iterator _it = mems.rbegin();
-  for(; it != mems.rend(); ++it) {
-    reg_t _start_page = it->first/PGSIZE;
-    reg_t _end_page = _start_page + it->second->size()/PGSIZE;
-    if (_start_page >= start_page && _end_page <= end_page) {
-      // contains
-      mems.erase(std::next(it).base());
-    }else if ( _start_page < start_page && _end_page > start_page) {
-      // overlapping
-      _it->first = _start_page;
-      if (_end_page > end_page)
-        end_page = _end_page;
-      mems.erase(std::next(it).base());
-    }else {
-      _it = it;
-      start_page = _start_page;
-      end_page = _end_page;
-      assert(start_page < end_page);
+  std::vector<std::pair<reg_t, mem_t*>>::iterator it = mems.begin() + 1;
+
+  while (it != mems.end()) {
+    reg_t start = prev(it)->first;
+    reg_t end = prev(it)->first + prev(it)->second->size();
+    reg_t start2 = it->first;
+    reg_t end2 = it->first + it->second->size();
+
+    //contains -> remove
+    if (start2 >= start && end2 <= end) {
+      it = mems.erase(it);
+    //parital overlapped -> extend
+    } else if (start2 >= start && start2 < end) {
+      delete prev(it)->second;
+      prev(it)->second = new mem_t(std::max(end, end2) - start);
+      it = mems.erase(it);
+    // no overlapping -> keep it
+    } else {
+      it++;
     }
   }
 }
@@ -212,6 +219,7 @@ int main(int argc, char** argv)
   bool halted = false;
   bool histogram = false;
   bool log = false;
+  bool socket = false;  // command line option -s
   bool dump_dts = false;
   bool dtb_enabled = true;
   bool real_time_clint = false;
@@ -230,7 +238,7 @@ int main(int argc, char** argv)
   bool log_cache = false;
   bool log_commits = false;
   const char *log_path = nullptr;
-  std::function<extension_t*()> extension;
+  std::vector<std::function<extension_t*()>> extensions;
   const char* initrd = NULL;
   const char* isa = DEFAULT_ISA;
   const char* priv = DEFAULT_PRIV;
@@ -380,6 +388,9 @@ int main(int argc, char** argv)
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
+#ifdef HAVE_BOOST_ASIO
+  parser.option('s', 0, 0, [&](const char* s){socket = true;});
+#endif
   parser.option('p', 0, 1, [&](const char* s){nprocs = atoul_nonzero_safe(s);});
   parser.option('m', 0, 1, [&](const char* s){mems = make_mems(s);});
   // I wanted to use --halted, but for some reason that doesn't work.
@@ -395,7 +406,7 @@ int main(int argc, char** argv)
   parser.option(0, "priv", 1, [&](const char* s){priv = s;});
   parser.option(0, "varch", 1, [&](const char* s){varch = s;});
   parser.option(0, "device", 1, device_parser);
-  parser.option(0, "extension", 1, [&](const char* s){extension = find_extension(s);});
+  parser.option(0, "extension", 1, [&](const char* s){extensions.push_back(find_extension(s));});
   parser.option(0, "dump-dts", 0, [&](const char *s){dump_dts = true;});
   parser.option(0, "disable-dtb", 0, [&](const char *s){dtb_enabled = false;});
   parser.option(0, "dtb", 1, [&](const char *s){dtb_file = s;});
@@ -454,7 +465,7 @@ int main(int argc, char** argv)
       kernel_offset = 0x400000;
     for (auto& m : mems) {
       if (kernel_size && (kernel_offset + kernel_size) < m.second->size()) {
-         read_file_bytes(kernel, 0, m.second->contents() + kernel_offset, kernel_size);
+         read_file_bytes(kernel, 0, m.second, kernel_offset, kernel_size);
          break;
       }
     }
@@ -466,16 +477,42 @@ int main(int argc, char** argv)
       if (initrd_size && (initrd_size + 0x1000) < m.second->size()) {
          initrd_end = m.first + m.second->size() - 0x1000;
          initrd_start = initrd_end - initrd_size;
-         read_file_bytes(initrd, 0, m.second->contents() + (initrd_start - m.first), initrd_size);
+         read_file_bytes(initrd, 0, m.second, initrd_start - m.first, initrd_size);
          break;
       }
     }
   }
 
+#ifdef HAVE_BOOST_ASIO
+  boost::asio::io_service *io_service_ptr = NULL; // needed for socket command interface option -s
+  tcp::acceptor *acceptor_ptr = NULL;
+  if (socket) {  // if command line option -s is set
+     try
+     { // create socket server
+       io_service_ptr = new boost::asio::io_service;
+       acceptor_ptr = new tcp::acceptor(*io_service_ptr, tcp::endpoint(tcp::v4(), 0));
+       // aceptor is created passing argument port=0, so O.S. will choose a free port
+       string name = boost::asio::ip::host_name();
+       std::cout << "Listening for debug commands on " << name.substr(0,name.find('.'))
+                 << " port " << acceptor_ptr->local_endpoint().port() << " ." << std::endl;
+       // at the end, add space and some other character for convenience of javascript .split(" ")
+     }
+     catch (std::exception& e)
+     {
+       std::cerr << e.what() << std::endl;
+       exit(-1);
+     }
+  }
+#endif
+
   sim_t s(isa, priv, varch, nprocs, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, plugin_devices, htif_args,
       std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
-      adele_params, adele_activate, adele_deactivate);
+#ifdef HAVE_BOOST_ASIO
+      , io_service_ptr, acceptor_ptr,
+#endif
+      adele_params, adele_activate, adele_deactivate
+      );
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
   simulation = &s;
   std::unique_ptr<jtag_dtm_t> jtag_dtm(
@@ -498,7 +535,8 @@ int main(int argc, char** argv)
   {
     if (ic) s.get_core(i)->get_mmu()->register_memtracer(&*ic);
     if (dc) s.get_core(i)->get_mmu()->register_memtracer(&*dc);
-    if (extension) s.get_core(i)->register_extension(extension());
+    for (auto e : extensions)
+      s.get_core(i)->register_extension(e());
   }
 
   s.set_debug(debug);

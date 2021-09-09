@@ -4,8 +4,8 @@
 
 #include "decode.h"
 #include "config.h"
-#include "devices.h"
 #include "trap.h"
+#include "abstract_device.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -21,6 +21,9 @@ struct adele_params_t {
   int int_value;
   double double_value;
 };
+
+using std::ostream;
+using std::stringstream;
 
 class processor_t;
 class mmu_t;
@@ -252,8 +255,11 @@ typedef enum {
 
 typedef enum {
   // 65('A') ~ 90('Z') is reserved for standard isa in misa
-  EXT_ZFH   = 0,
-  EXT_ZVEDIV,
+  EXT_ZFH,
+  EXT_ZBA,
+  EXT_ZBB,
+  EXT_ZBC,
+  EXT_ZBS,
 } isa_extension_t;
 
 typedef enum {
@@ -279,12 +285,12 @@ class processor_t : public abstract_device_t
 public:
   friend class AxPIKE::Stats;
   processor_t(const char* isa, const char* priv, const char* varch,
-              simif_t* sim, uint32_t id, 
+              simif_t* sim, uint32_t id, bool halt_on_reset,
+              FILE *log_file, ostream *sout_ptr, // because of command line option --log and -s we need both
               std::unordered_map<std::string, adele_params_t> adele_params,
               std::vector<std::string> adele_activate,
-              std::vector<std::string> adele_deactivate,
-              bool halt_on_reset,
-              FILE *log_file);
+              std::vector<std::string> adele_deactivate
+              );
   ~processor_t();
 
   AxPIKE::Control ax_control;
@@ -312,7 +318,8 @@ public:
            supports_extension('D') ? 64 :
            supports_extension('F') ? 32 : 0;
   }
-  extension_t* get_extension() { return ext; }
+  extension_t* get_extension();
+  extension_t* get_extension(const char* name);
   bool supports_extension(unsigned char ext) {
     if (ext >= 'A' && ext <= 'Z')
       return ((state.misa >> (ext - 'A')) & 1);
@@ -328,7 +335,7 @@ public:
   }
   void check_pc_alignment(reg_t pc) {
     if (unlikely(pc & ~pc_alignment_mask()))
-      throw trap_instruction_address_misaligned(pc, 0, 0);
+      throw trap_instruction_address_misaligned(state.v, pc, 0, 0);
   }
   reg_t legalize_privilege(reg_t);
   void set_privilege(reg_t);
@@ -447,7 +454,7 @@ public:
 private:
   simif_t* sim;
   mmu_t* mmu; // main memory is always accessed via the mmu
-  extension_t* ext;
+  std::unordered_map<std::string, extension_t*> custom_extensions;
   disassembler_t* disassembler;
   state_t state;
   uint32_t id;
@@ -458,10 +465,11 @@ private:
   bool histogram_enabled;
   bool log_commits_enabled;
   FILE *log_file;
+  ostream *sout_ptr; // needed for socket command interface -s, also used for -d and -l, but not for --log
   bool halt_on_reset;
   std::vector<bool> extension_table;
   std::vector<bool> impl_table;
-  
+
   entropy_source es; // Crypto ISE Entropy source.
 
   std::vector<insn_desc_t> instructions;
@@ -482,6 +490,8 @@ private:
 
   void enter_debug_mode(uint8_t cause);
 
+  void debug_output_log(stringstream *s); // either output to interactive user or write to log file
+
   friend class mmu_t;
   friend class clint_t;
   friend class extension_t;
@@ -492,7 +502,8 @@ private:
   void build_opcode_map();
   void register_base_instructions();
   insn_func_t decode_insn(insn_t insn);
-  reg_t cal_satp(reg_t val) const;
+  bool satp_valid(reg_t val) const;
+  reg_t compute_new_satp(reg_t val, reg_t old) const;
 
   // Track repeated executions for processor_t::disasm()
   uint64_t last_pc, last_bits, executions;
@@ -509,7 +520,7 @@ public:
       reg_t vlmax;
       reg_t vstart, vxrm, vxsat, vl, vtype, vlenb;
       reg_t vma, vta;
-      reg_t vediv, vsew;
+      reg_t vsew;
       float vflmul;
       reg_t ELEN, VLEN;
       bool vill;
@@ -526,7 +537,7 @@ public:
 #ifdef WORDS_BIGENDIAN
           // "V" spec 0.7.1 requires lower indices to map to lower significant
           // bits when changing SEW, thus we need to index from the end on BE.
-  	  n ^= elts_per_reg - 1;
+          n ^= elts_per_reg - 1;
 #endif
           reg_referenced[vReg] = 1;
 
@@ -567,10 +578,10 @@ public:
 
 reg_t illegal_instruction(processor_t* p, insn_t insn, reg_t pc);
 
-#define REGISTER_INSN(proc, name, match, mask) \
+#define REGISTER_INSN(proc, name, match, mask, archen) \
   extern reg_t rv32_##name(processor_t*, insn_t, reg_t); \
   extern reg_t rv64_##name(processor_t*, insn_t, reg_t); \
-  proc->register_insn((insn_desc_t){match, mask, rv32_##name, rv64_##name});\
+  proc->register_insn((insn_desc_t){match, mask, rv32_##name, rv64_##name,archen}); \
   AxPIKE::Stats::insns.push_back(#name);
 
 #endif

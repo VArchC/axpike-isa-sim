@@ -5,6 +5,7 @@
 #include "dts.h"
 #include "remote_bitbang.h"
 #include "byteorder.h"
+#include "platform.h"
 #include <fstream>
 #include <map>
 #include <iostream>
@@ -38,8 +39,11 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
              const char *log_path,
-             bool dtb_enabled, const char *dtb_file,
-             std::unordered_map<std::string, adele_params_t> adele_params,
+             bool dtb_enabled, const char *dtb_file
+#ifdef HAVE_BOOST_ASIO
+             , io_service *io_service_ptr_ctor, tcp::acceptor *acceptor_ptr_ctor // option -s
+#endif
+             , std::unordered_map<std::string, adele_params_t> adele_params,
              std::unordered_map<int, std::vector<std::string>> adele_activate,
              std::unordered_map<int, std::vector<std::string>> adele_deactivate
              )
@@ -54,6 +58,7 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     dtb_file(dtb_file ? dtb_file : ""),
     dtb_enabled(dtb_enabled),
     log_file(log_path),
+    sout(nullptr),
     current_step(0),
     current_proc(0),
     debug(false),
@@ -63,6 +68,12 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
     debug_module(this, dm_config)
 {
   signal(SIGINT, &handle_signal);
+
+#ifdef HAVE_BOOST_ASIO
+  io_service_ptr = io_service_ptr_ctor; // socket interface
+  acceptor_ptr = acceptor_ptr_ctor; // socket interface
+#endif
+  sout.rdbuf(cerr.rdbuf()); // debug output goes to stderr by default
 
   for (auto& x : mems)
     bus.add_device(x.first, x.second);
@@ -84,12 +95,12 @@ sim_t::sim_t(const char* isa, const char* priv, const char* varch,
 
   for (size_t i = 0; i < nprocs; i++) {
     int hart_id = hartids.empty() ? i : hartids[i];
-    procs[i] = new processor_t(isa, priv, varch, this, hart_id, 
+    procs[i] = new processor_t(isa, priv, varch, this, hart_id, halted,
+                               log_file.get(), &sout,
                                adele_params,
                                adele_activate[i],
-                               adele_deactivate[i],
-                               halted,
-                               log_file.get());
+                               adele_deactivate[i]
+                               );
   }
 
   make_dtb();
@@ -366,7 +377,7 @@ char* sim_t::addr_to_mem(reg_t addr) {
   auto desc = bus.find_device(addr);
   if (auto mem = dynamic_cast<mem_t*>(desc.second))
     if (addr - desc.first < mem->size())
-      return mem->contents(addr);
+      return mem->contents(addr - desc.first);
   return NULL;
 }
 
