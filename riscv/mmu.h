@@ -117,7 +117,7 @@ public:
         if (proc) READ_MEM(addr, size); \
         datatype##_t *bypass = (datatype##_t*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr); \
         datatype##_t data = from_target(*(target_endian<datatype##_t>*)bypass); \
-        if (likely(c != NULL) && c->DM_memrd[c->cur_insn_id] != NULL) {\
+        if (likely(c != NULL) && c->DM_memrd[(c->cur_insn_id << 2) | c->prv] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
           c->s.name = "Mem";\
           c->s.address = addr;\
@@ -125,7 +125,7 @@ public:
           c->s.op = AxPIKE::Source::READ;\
           c->s.width = sizeof(datatype##_t);\
           c->s.bypass = bypass;\
-          (c->DM_memrd[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &data);\
+          (c->DM_memrd[(c->cur_insn_id << 2) | c->prv])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &data);\
         }\
         return data; \
       } \
@@ -138,7 +138,7 @@ public:
             throw *matched_trigger; \
         } \
         if (proc) READ_MEM(addr, size); \
-        if (likely(c != NULL) && c->DM_memrd[c->cur_insn_id] != NULL) {\
+        if (likely(c != NULL) && c->DM_memrd[(c->cur_insn_id << 2) | c->prv] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
           c->s.name = "Mem";\
           c->s.address = addr;\
@@ -146,7 +146,7 @@ public:
           c->s.op = AxPIKE::Source::READ;\
           c->s.width = sizeof(datatype##_t);\
           c->s.bypass = bypass;\
-          (c->DM_memrd[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &data);\
+          (c->DM_memrd[(c->cur_insn_id << 2) | c->prv])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &data);\
         }\
         return data; \
       } \
@@ -200,7 +200,7 @@ public:
       size_t size = sizeof(datatype##_t); \
       if ((xlate_flags) == 0 && likely(tlb_store_tag[vpn % TLB_ENTRIES] == vpn)) { \
         if (proc) WRITE_MEM(addr, val, size); \
-        if (likely(c != NULL) && c->DM_memwr[c->cur_insn_id] != NULL) {\
+        if (likely(c != NULL) && c->DM_memwr[(c->cur_insn_id << 2) | c->prv] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
           c->s.name = "Mem";\
           c->s.address = addr;\
@@ -208,7 +208,7 @@ public:
           c->s.op = AxPIKE::Source::WRITE;\
           c->s.width = sizeof(datatype##_t);\
           c->s.bypass = tlb_data[vpn % TLB_ENTRIES].host_offset + addr;\
-          (c->DM_memwr[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &val);\
+          (c->DM_memwr[(c->cur_insn_id << 2) | c->prv])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &val);\
         }\
         *(target_endian<datatype##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
       } \
@@ -219,7 +219,7 @@ public:
             throw *matched_trigger; \
         } \
         if (proc) WRITE_MEM(addr, val, size); \
-        if (likely(c != NULL) && c->DM_memwr[c->cur_insn_id] != NULL) {\
+        if (likely(c != NULL) && c->DM_memwr[(c->cur_insn_id << 2) | c->prv] != NULL) {\
           c->s.type = AxPIKE::Source::MEM;\
           c->s.name = "Mem";\
           c->s.address = addr;\
@@ -227,7 +227,7 @@ public:
           c->s.op = AxPIKE::Source::WRITE;\
           c->s.width = sizeof(datatype##_t);\
           c->s.bypass = tlb_data[vpn % TLB_ENTRIES].host_offset + addr;\
-          (c->DM_memwr[c->cur_insn_id])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &val);\
+          (c->DM_memwr[(c->cur_insn_id << 2) | c->prv])(proc, c->insn, c->pc, c->xlen, c->npc, &(c->s), &val);\
         }\
         *(target_endian<datatype##_t>*)(tlb_data[vpn % TLB_ENTRIES].host_offset + addr) = to_target(val); \
       } \
