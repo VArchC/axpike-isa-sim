@@ -85,6 +85,7 @@ struct : public arg_t {
     {
       #define DECLARE_CSR(name, num) case num: return #name;
       #include "encoding.h"
+      #include "axpike_encoding.h"
       #undef DECLARE_CSR
       default:
       {
@@ -617,6 +618,7 @@ static void NOINLINE add_unknown_insns(disassembler_t* d)
   #define DECLARE_INSN(code, match, mask) \
    add_unknown_insn(d, #code, match, mask);
   #include "encoding.h"
+  #include "axpike_encoding.h"
   #undef DECLARE_INSN
 }
 
@@ -642,6 +644,7 @@ disassembler_t::disassembler_t(int xlen)
    const uint32_t match_##code = match; \
    const uint32_t mask_##code = mask;
   #include "encoding.h"
+  #include "axpike_encoding.h"
   #undef DECLARE_INSN
 
   // explicit per-instruction disassembly

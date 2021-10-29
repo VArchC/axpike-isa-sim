@@ -106,6 +106,14 @@ namespace AxPIKE {
       void deactivateApprox(uint8_t approx_id, uint64_t prv);
       
       std::unordered_map<std::string, uint8_t> approxes;
+
+      uint64_t available_approx[4];
+      uint64_t ac_behavior;
+      uint64_t dc_behavior;
+      bool identify_csr(int which);
+      void setApprox_csr(uint64_t req_approx, uint64_t req_prv);
+      void set_csr(int which, uint64_t val);
+      uint64_t get_csr(int which);
   };
 }
 

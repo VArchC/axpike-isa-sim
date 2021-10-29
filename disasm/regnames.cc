@@ -27,6 +27,7 @@ const char* csr_name(int which) {
   switch (which) {
     #define DECLARE_CSR(name, number)  case number: return #name;
     #include "encoding.h"
+    #include "axpike_encoding.h"
     #undef DECLARE_CSR
   }
   return "unknown-csr";

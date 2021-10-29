@@ -12,6 +12,7 @@ adele_hdrs = \
 	axpike_storage.h \
 	axpike_htif.h \
 	axpike_log.h \
+	axpike_encoding.h \
 	$(adele_gen_hdrs) \
 
 adele_srcs = \

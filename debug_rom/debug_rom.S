@@ -1,6 +1,7 @@
 // See LICENSE.SiFive for license details.
 
 #include "riscv/encoding.h"
+#include "axpike_encoding.h"
 #include "riscv/debug_rom_defines.h"
 
         .option norvc

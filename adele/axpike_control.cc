@@ -11,8 +11,12 @@ AxPIKE::Control::Control(processor_t* _p, std::vector<std::string> adele_activat
   log(_p),
   counters(_p),
   p(_p),
-  OP(cur_insn_id, _p->state.prv) {
+  OP(cur_insn_id, _p->state.prv),
+  available_approx{0,0,0,0},
+  ac_behavior(~0x0ULL),
+  dc_behavior(~0x0ULL) {
     this->initModels();
+    this->available_approx[PRV_M] = (0x1ULL << this->approxes.size()) - 1;
 
 
     for (std::string& a : adele_activate) {
@@ -167,6 +171,7 @@ void AxPIKE::Control::issue(uint8_t cmd) {
       DM_memwr[i].clear();
       EM[i].clear();
     }
+    OP.clear();
     this->active_approx[0] = 0;
     this->active_approx[1] = 0;
     this->active_approx[2] = 0;
@@ -185,3 +190,130 @@ void AxPIKE::Control::issue(uint8_t cmd) {
     this->stats.clearCounters();
   }
 } // issue()
+
+bool AxPIKE::Control::identify_csr(int which) {
+  return (
+          which == CSR_URKAV ||
+          which == CSR_URKST ||
+          which == CSR_SRKAV ||
+          which == CSR_SRKST ||
+          which == CSR_MRKAV ||
+          which == CSR_MRKST ||
+          which == CSR_MRKACBHV ||
+          which == CSR_MRKDCBHV ||
+          which == CSR_MRKGROUP ||
+          which == CSR_MRKADDR
+      );
+}
+
+void AxPIKE::Control::setApprox_csr(uint64_t req_approx, uint64_t req_prv) {
+  uint8_t approx_id = 0;
+  uint64_t diff = (req_approx ^ active_approx[req_prv]) & available_approx[prv];
+
+  while (diff) {
+    if (diff & 0x1) {
+      if (req_approx & 0x1) {
+        activateApprox(approx_id, req_prv);
+      }
+      else {
+        deactivateApprox(approx_id, req_prv);
+      }
+    }
+
+    approx_id++;
+    req_approx = req_approx >> 1;
+    diff = diff >> 1;
+  }
+}
+
+void AxPIKE::Control::set_csr(int which, uint64_t val) {
+  switch (which) {
+    case CSR_URKAV:
+      if (prv > PRV_U) {
+        available_approx[PRV_U] = (val & available_approx[PRV_M]);
+      }
+      break;
+
+    case CSR_URKST:
+      setApprox_csr(val, PRV_U);
+      break;
+
+    case CSR_SRKAV:
+      if (prv > PRV_S) {
+        available_approx[PRV_S] = (val & available_approx[PRV_M]);
+      }
+      break;
+
+    case CSR_SRKST:
+      setApprox_csr(val, PRV_S);
+      break;
+
+    case CSR_MRKST:
+      setApprox_csr(val, PRV_M);
+      break;
+
+    case CSR_MRKACBHV:
+      this->ac_behavior = val;
+      break;
+
+    case CSR_MRKDCBHV:
+      this->dc_behavior = val;
+      break;
+
+    case CSR_MRKGROUP:
+      this->issue(0xff); // clear
+      break;
+  }
+}
+
+uint64_t AxPIKE::Control::get_csr(int which) {
+  uint64_t r = 0;
+  switch (which) {
+    case CSR_URKAV:
+      r = available_approx[PRV_U];
+      break;
+
+    case CSR_URKST:
+      r = active_approx[PRV_U];
+      if (prv == PRV_U) {
+        r &= available_approx[PRV_U];
+      }
+      break;
+
+    case CSR_SRKAV:
+      r = available_approx[PRV_S];
+      break;
+
+    case CSR_SRKST:
+      r = active_approx[PRV_S];
+      if (prv == PRV_S) {
+        r &= available_approx[PRV_S];
+      }
+      break;
+
+    case CSR_MRKAV:
+      r = available_approx[PRV_M];
+      break;
+
+    case CSR_MRKST:
+      r = active_approx[PRV_M];
+      break;
+
+    case CSR_MRKACBHV:
+      r = ac_behavior;
+      break;
+
+    case CSR_MRKDCBHV:
+      r = dc_behavior;
+      break;
+
+    //case CSR_MRKGROUP:
+    //  r = 0;
+    //  break;
+
+    //case CSR_MRKADDR:
+    //  r = 0;
+    //  break;
+  }
+  return r;
+}

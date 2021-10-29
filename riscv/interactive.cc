@@ -283,6 +283,7 @@ reg_t sim_t::get_reg(const std::vector<std::string>& args)
     if (*ptr) {
       #define DECLARE_CSR(name, number) if (args[1] == #name) return p->get_csr(number);
       #include "encoding.h"              // generates if's for all csrs
+      #include "axpike_encoding.h"
       r = NXPR;                          // else case (csr name not found)
       #undef DECLARE_CSR
     }

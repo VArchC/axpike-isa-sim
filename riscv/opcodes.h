@@ -1,4 +1,5 @@
 #include "encoding.h"
+#include "axpike_encoding.h"
 
 #define ZERO	0
 #define T0      5

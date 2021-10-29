@@ -1351,6 +1351,10 @@ void processor_t::set_csr(int which, reg_t val)
       break;
   }
 
+  if (ax_control.identify_csr(which)) {
+    ax_control.set_csr(which, val);
+  }
+
 #if defined(RISCV_ENABLE_COMMITLOG)
   switch (which)
   {
@@ -1782,6 +1786,10 @@ reg_t processor_t::get_csr(int which, insn_t insn, bool write, bool peek)
       ret(VU.vlenb);
   }
 
+if (ax_control.identify_csr(which)) {
+  ret(ax_control.get_csr(which));
+}
+
 #undef ret
 
   // If we get here, the CSR doesn't exist.  Unimplemented CSRs always throw
@@ -1894,6 +1902,7 @@ void processor_t::register_base_instructions()
   #define DECLARE_INSN(name, match, mask) \
     insn_bits_t name##_match = (match), name##_mask = (mask);
   #include "encoding.h"
+  #include "axpike_encoding.h"
   #undef DECLARE_INSN
 
   #define DEFINE_INSN(name) \

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <strings.h>
 #include "encoding.h"
+#include "axpike_encoding.h"
 #include "config.h"
 #include "common.h"
 #include "softfloat_types.h"
