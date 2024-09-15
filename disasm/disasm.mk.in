@@ -5,8 +5,10 @@ disasm_CFLAGS = -fPIC
 
 disasm_srcs = \
   disasm.cc \
+  isa_parser.cc \
   regnames.cc \
 
 disasm_install_lib = yes
 
 regnames.o: insn_count.h
+disasm_install_pcs = yes
