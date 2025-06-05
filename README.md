@@ -54,6 +54,8 @@ We assume that the RISCV environment variable is set to the RISC-V tools
 install path.
 
     $ apt-get install device-tree-compiler
+    $ git clone --recursive https://github.com/VArchC/axpike-isa-sim.git
+    $ cd axpike-isa-sim
     $ mkdir build
     $ cd build
     $ ../configure --prefix=$RISCV
