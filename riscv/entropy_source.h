@@ -1,8 +1,12 @@
+// See LICENSE for license details.
+
+#ifndef _RISCV_ENTROPY_SOURCE_H
+#define _RISCV_ENTROPY_SOURCE_H
 
 #include <fstream>
 #include <iostream>
 
-#include "internals.h"
+#include "common.h"
 
 //
 // Used to model the cryptography extension entropy source.
@@ -11,7 +15,7 @@ class entropy_source {
 
 public:
 
-  // Valid return codes for OPST bits [31:30] when reading sentropy.
+  // Valid return codes for OPST bits [31:30] when reading seed.
   static const uint32_t OPST_BIST = 0x0 << 30;
   static const uint32_t OPST_WAIT = 0x1 << 30;
   static const uint32_t OPST_ES16 = 0x2 << 30;
@@ -27,20 +31,19 @@ public:
   }
 
   //
-  // sentropy register
+  // seed register
   // ------------------------------------------------------------
 
-  void set_sentropy(reg_t val) {
-    // Always ignore writes to sentropy.
+  void set_seed(reg_t UNUSED val) {
+    // Always ignore writes to seed.
     // This CSR is strictly read only. It occupies a RW CSR address
     // to handle the side-effect of the changing seed value on a read.
   }
 
-
   //
-  // The format of sentropy is described in Section 4.1 of
+  // The format of seed is described in Section 4.1 of
   // the scalar cryptography specification.
-  reg_t get_sentropy() {
+  reg_t get_seed() {
 
     uint32_t result  = 0;
 
@@ -50,27 +53,27 @@ public:
     // the bare minimum.
     uint32_t return_status = OPST_ES16;
 
-    if(return_status == OPST_ES16) {
+    if (return_status == OPST_ES16) {
 
-        // Add some sampled entropy into the low 16 bits
-        uint16_t seed  = this -> get_two_random_bytes();
-        result        |= seed;
+      // Add some sampled entropy into the low 16 bits
+      uint16_t entropy = this -> get_two_random_bytes();
+      result |= entropy;
 
-    } else if(return_status == OPST_BIST) {
+    } else if (return_status == OPST_BIST) {
 
-        // Do nothing.
+      // Do nothing.
 
-    } else if(return_status == OPST_WAIT) {
+    } else if (return_status == OPST_WAIT) {
 
-        // Do nothing.
+      // Do nothing.
 
-    } else if(return_status == OPST_DEAD) {
+    } else if (return_status == OPST_DEAD) {
 
-        // Do nothing. Stay dead.
+      // Do nothing. Stay dead.
 
     } else {
 
-        // Unreachable.
+      // Unreachable.
 
     }
 
@@ -93,27 +96,28 @@ public:
   // Read two random bytes from the entropy source file.
   uint16_t get_two_random_bytes() {
 
-      std::ifstream fh(this -> randomness_source, std::ios::binary);
+    std::ifstream fh(this -> randomness_source, std::ios::binary);
 
-      if(fh.is_open()) {
+    if (fh.is_open()) {
 
-          uint16_t random_bytes;
+      uint16_t random_bytes;
 
-          fh.read((char*)(&random_bytes), 2);
+      fh.read((char*)(&random_bytes), 2);
 
-          fh.close();
+      fh.close();
 
-          return random_bytes;
+      return random_bytes;
 
-      } else {
+    } else {
 
-          fprintf(stderr, "Could not open randomness source file:\n\t");
-          fprintf(stderr, "%s", randomness_source.c_str());
-          abort();
+      fprintf(stderr, "Could not open randomness source file:\n\t");
+      fprintf(stderr, "%s", randomness_source.c_str());
+      abort();
 
-      }
+    }
 
   }
 
 };
 
+#endif

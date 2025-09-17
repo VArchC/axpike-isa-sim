@@ -1,2 +1,1 @@
-require_extension('S');
-require_impl(IMPL_MMU);
+#include "sfence_inval_ir.h"

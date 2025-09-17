@@ -2,9 +2,10 @@
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
-#include <processor.h>
+#include "processor.h"
 #include "insn_count.h"
 #include "mmu.h"
+
 
 std::vector<std::string> AxPIKE::Stats::insns;
 std::unordered_map<uint8_t, std::string> AxPIKE::Stats::approxes;
